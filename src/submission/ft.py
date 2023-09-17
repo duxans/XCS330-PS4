@@ -1,4 +1,6 @@
 from typing import List, Tuple
+#import sys #FOR DEBUGGING TEST
+#sys.path.append('src') #FOR DEBUGGING TEST
 import argparse
 import torch
 import transformers
@@ -13,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import itertools
 from .icl import get_icl_prompts, do_sample, get_performance_metric
+#from submission.icl import get_icl_prompts, do_sample, get_performance_metric #FOR DEBUGGING TEST
 import tqdm
 import random
 
@@ -75,10 +78,13 @@ def parameters_to_fine_tune(model: nn.Module, mode: str) -> List:
       A list of nn.Parameters of `model` that should be fine-tuned in the given
         fine-tuning mode.
     """
-
+    
     if mode == 'all':
         ### START CODE HERE ###
-        pass
+        parameters = []
+        for param in model.parameters():
+            parameters.append(param)
+        return parameters 
         ### END CODE HERE ###
     elif mode == 'last':
         ### START CODE HERE ###
@@ -127,7 +133,7 @@ def get_loss(logits: torch.tensor, targets: torch.tensor) -> torch.tensor:
     loss = None
     if logits.dim() == 2:
         ### START CODE HERE ###
-        pass
+        loss = nn.CrossEntropyLoss(reduction='mean')(logits, targets)
         ### END CODE HERE ###
     elif logits.dim() == 3:
         ### START CODE HERE ###
@@ -164,7 +170,21 @@ def get_acc(logits, targets):
 
     if logits.dim() == 2:
         ### START CODE HERE ###
-        pass
+        #return (logits.argmax(dim=1) == targets).float().mean()
+        assert logits.dim() == 2
+        assert targets.dim() == 1
+        assert logits.shape[0] == targets.shape[0]
+        #exclude masked tokens
+                 
+        y = torch.argmax(logits, dim=1) == targets
+        y = y.type(torch.float)
+        acc = torch.mean(y).item()
+        return acc
+        
+        #scalar = logits.argmax(dim=1) == targets
+        #scalar = scalar[scalar == True].shape[0] / scalar.shape[0]
+
+        #return scalar
         ### END CODE HERE ###
     elif logits.dim() == 3:
         ### START CODE HERE ###

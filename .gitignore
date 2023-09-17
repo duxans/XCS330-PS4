@@ -1,1 +1,15 @@
 .DS_Store
+.vscode/launch.json
+src/__pycache__/
+src/submission/__pycache__/
+.DS_Store
+src/submission/results/
+src/.DS_Store
+~/.cache
+~/Downloads
+src/cache
+src/.cache
+sandbox.ipynb
+src/.DS_Store
+src/submission.zip
+src/plot.png
