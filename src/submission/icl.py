@@ -208,7 +208,7 @@ def run_icl(models: List[str], datasets_: List[str], ks: List[int], prompt_modes
                             ### START CODE HERE ###
                             prompts = get_icl_prompts(support_x, support_y, test_input, prompt_mode)
                             sampled_tokens = do_sample(model, tokenizer(prompts, return_tensors='pt').input_ids.to(DEVICE), stop_tokens, max_tokens)
-                            decoded_prediction = tokenizer.decode(sampled_tokens)
+                            decoded_prediction = tokenizer.decode(sampled_tokens[0].item(), skip_special_tokens=True)
                             ### END CODE HERE ###
 
                             predictions.append(decoded_prediction)
