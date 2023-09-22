@@ -58,7 +58,26 @@ def get_icl_prompts(
     prompt = ''
 
     ### START CODE HERE ###
-    pass
+    #shuffle the support examples and labels together
+    examples = list(zip(support_inputs, support_labels))
+    np.random.permutation(examples)
+    if prompt_mode == 'qa':
+        for support_input, support_label in examples:
+            prompt += f'{support_input} In the {support_label}. '
+        prompt += f'{test_input} In the'
+    elif prompt_mode == 'none':
+        for support_input, support_label in examples:
+            prompt += f'{support_input} {support_label} '
+        prompt += f'{test_input}'
+    elif prompt_mode == 'tldr':
+        for support_input, support_label in examples:
+            prompt += f'{support_input} TL;DR: {support_label}. '
+        prompt += f'{test_input} TL;DR:'
+    elif prompt_mode == 'custom':
+        for support_input, support_label in examples:
+            prompt += f'Q:<{support_input}> A:<{support_label}>'
+        prompt += f'Q:<{test_input}> A:'
+        
     ### END CODE HERE ###
 
     return prompt
@@ -119,7 +138,16 @@ def do_sample(model, input_ids, stop_tokens, max_tokens):
     sampled_tokens = []
 
     ### START CODE HERE ###
-    pass
+    with torch.inference_mode():
+        while len(sampled_tokens) < max_tokens:
+            outputs = model(input_ids)
+            logits = outputs.logits
+            next_token_logits = logits[:, -1, :]
+            next_token_id = torch.argmax(next_token_logits, dim=-1)
+            if next_token_id in stop_tokens:
+                break
+            sampled_tokens.append(next_token_id)
+            input_ids = torch.cat((input_ids, next_token_id.unsqueeze(0)), dim=-1)
     ### END CODE HERE ###
 
     return sampled_tokens
@@ -178,7 +206,9 @@ def run_icl(models: List[str], datasets_: List[str], ks: List[int], prompt_modes
                             decoded_prediction = ''
 
                             ### START CODE HERE ###
-                            pass
+                            prompts = get_icl_prompts(support_x, support_y, test_input, prompt_mode)
+                            sampled_tokens = do_sample(model, tokenizer(prompts, return_tensors='pt').input_ids.to(DEVICE), stop_tokens, max_tokens)
+                            decoded_prediction = tokenizer.decode(sampled_tokens)
                             ### END CODE HERE ###
 
                             predictions.append(decoded_prediction)

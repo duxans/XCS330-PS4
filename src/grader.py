@@ -195,13 +195,14 @@ class Test_2a(GradedTestCase):
         # Get solution prompts
         utils.fix_random_seeds()
         sol_prompt_qa = self.sol_get_icl_prompts(support_inputs, support_labels, test_input, prompt_mode='qa')
+        
 
         utils.fix_random_seeds()
         sol_prompt_none = self.sol_get_icl_prompts(support_inputs, support_labels, test_input, prompt_mode='none')
 
         utils.fix_random_seeds()
         sol_prompt_tldr = self.sol_get_icl_prompts(support_inputs, support_labels, test_input, prompt_mode='tldr')
-
+        
         # Compare the prompts
         self.assertTrue(prompt_qa == sol_prompt_qa, "`qa` prompt not matching! Please follow all requirements outlined in the function comments and the writeup.")  
         self.assertTrue(prompt_none == sol_prompt_none, "`none` prompt not matching! Please follow all requirements outlined in the function comments and the writeup.")  
