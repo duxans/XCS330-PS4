@@ -143,6 +143,7 @@ def do_sample(model, input_ids, stop_tokens, max_tokens):
             outputs = model(input_ids)
             logits = outputs.logits
             next_token_logits = logits[:, -1, :]
+            #greedy sampling
             next_token_id = torch.argmax(next_token_logits, dim=-1)
             if next_token_id in stop_tokens:
                 break
@@ -208,7 +209,9 @@ def run_icl(models: List[str], datasets_: List[str], ks: List[int], prompt_modes
                             ### START CODE HERE ###
                             prompts = get_icl_prompts(support_x, support_y, test_input, prompt_mode)
                             sampled_tokens = do_sample(model, tokenizer(prompts, return_tensors='pt').input_ids.to(DEVICE), stop_tokens, max_tokens)
-                            decoded_prediction = tokenizer.decode(sampled_tokens[0].item(), skip_special_tokens=True)
+                            sampled_tokens = torch.cat(sampled_tokens, dim=-1)
+                            sampled_tokens = sampled_tokens.tolist()
+                            decoded_prediction = tokenizer.decode(token_ids=sampled_tokens, skip_special_tokens=True)
                             ### END CODE HERE ###
 
                             predictions.append(decoded_prediction)
