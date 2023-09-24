@@ -16,3 +16,5 @@ src/plot.png
 .DS_Store
 src/.DS_Store
 src/submission/Archive.zip
+results_backup/
+PS4.pdf

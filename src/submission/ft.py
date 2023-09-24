@@ -49,7 +49,14 @@ class LoRAConv1DWrapper(nn.Module):
         self.lora_A, self.lora_B = None, None
         
         ### START CODE HERE ###
-        pass
+        '''LoRA repo at line 143: https://github.com/microsoft/LoRA/blob/main/loralib/layers.py#L199 '''
+        
+        # Freeze the base module parameters
+        for param in self.base_module.parameters():
+            param.requires_grad = False
+
+        self.lora_A = nn.Parameter(nn.init.kaiming_uniform_(torch.empty(self.base_module.weight.shape[0], lora_rank, dtype=torch.float32)))
+        self.lora_B = nn.Parameter(torch.zeros(self.base_module.weight.shape[1], lora_rank, dtype=torch.float32))      
         ### END CODE HERE ###
 
 
@@ -61,7 +68,10 @@ class LoRAConv1DWrapper(nn.Module):
         ###
         #############################
         ### START CODE HERE ###
-        pass
+        shape_pre_W = self.base_module.weight.shape
+        result = torch.nn.functional.linear(x,shape_pre_W, bias=self.base_module.bias)
+        #result = torch.nn.functional.linear(x,self.weight.transpose(0,1), bias=self.bias)
+        result += (x @ self.lora_A.transpose(0,1) @ self.lora_B.transpose(0,1))
         ### END CODE HERE ###
 
 
@@ -88,15 +98,26 @@ def parameters_to_fine_tune(model: nn.Module, mode: str) -> List:
         ### END CODE HERE ###
     elif mode == 'last':
         ### START CODE HERE ###
-        pass
+        #finetune the last 2 transformer blocks
+        parameters = []
+        for param in model.transformer.h[-2:].parameters():
+            parameters.append(param)
+        return parameters
         ### END CODE HERE ###
     elif mode == 'first':
         ### START CODE HERE ###
-        pass
+        parameters = []
+        for param in model.transformer.h[:2].parameters():
+            parameters.append(param)
+        return parameters
         ### END CODE HERE ###
     elif mode == 'middle':
         ### START CODE HERE ###
-        pass
+        parameters = []
+        middle = len(model.transformer.h) // 2 - 1
+        for param in model.transformer.h[middle:middle + 2].parameters():
+            parameters.append(param)
+        return parameters
         ### END CODE HERE ###
     elif mode.startswith('lora'):
         ### START CODE HERE ###
