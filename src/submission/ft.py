@@ -50,7 +50,7 @@ class LoRAConv1DWrapper(nn.Module):
         
         ### START CODE HERE ###
         '''LoRA repo at line 143: https://github.com/microsoft/LoRA/blob/main/loralib/layers.py#L199 '''
-        
+
         # Freeze the base module parameters
         for param in self.base_module.parameters():
             param.requires_grad = False
@@ -69,9 +69,10 @@ class LoRAConv1DWrapper(nn.Module):
         #############################
         ### START CODE HERE ###
         shape_pre_W = self.base_module.weight.shape
-        result = torch.nn.functional.linear(x,shape_pre_W, bias=self.base_module.bias)
-        #result = torch.nn.functional.linear(x,self.weight.transpose(0,1), bias=self.bias)
-        result += (x @ self.lora_A.transpose(0,1) @ self.lora_B.transpose(0,1))
+        #result = torch.nn.functional.linear(x,shape_pre_W, bias=self.base_module.bias)
+        result = self.base_module(x)
+        result += x @ self.lora_A @ self.lora_B.transpose(0,1)
+        return result
         ### END CODE HERE ###
 
 
@@ -121,7 +122,10 @@ def parameters_to_fine_tune(model: nn.Module, mode: str) -> List:
         ### END CODE HERE ###
     elif mode.startswith('lora'):
         ### START CODE HERE ###
-        pass
+        parameters = []
+        for modules in model.transformer.h:
+            for param in modules.parameters():
+                parameters.append(param)
         ### END CODE HERE ###
     else:
         raise NotImplementedError()
