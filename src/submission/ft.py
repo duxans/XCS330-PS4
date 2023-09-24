@@ -123,9 +123,13 @@ def parameters_to_fine_tune(model: nn.Module, mode: str) -> List:
     elif mode.startswith('lora'):
         ### START CODE HERE ###
         parameters = []
-        for modules in model.transformer.h:
-            for param in modules.parameters():
-                parameters.append(param)
+        #checking for modules that are an instance of LoRAConv1DWrapper:
+        for modules in model.modules():
+            if isinstance(modules, LoRAConv1DWrapper):
+                #for param in modules.parameters():
+                for param in modules.lora_A, modules.lora_B:
+                    parameters.append(param)
+        return parameters
         ### END CODE HERE ###
     else:
         raise NotImplementedError()
@@ -162,7 +166,7 @@ def get_loss(logits: torch.tensor, targets: torch.tensor) -> torch.tensor:
         ### END CODE HERE ###
     elif logits.dim() == 3:
         ### START CODE HERE ###
-        pass
+        loss = nn.CrossEntropyLoss(reduction='none')(logits.transpose(1,2), targets)
         ### END CODE HERE ###
     else:
         raise ValueError(f'Logits should either be 2-dim (for classification) or 3-dim (for generation); got {logits.dim()}')
@@ -213,7 +217,10 @@ def get_acc(logits, targets):
         ### END CODE HERE ###
     elif logits.dim() == 3:
         ### START CODE HERE ###
-        pass
+        y = torch.argmax(logits, dim=2) == targets
+        y = y.type(torch.float)
+        acc = torch.mean(y).item()
+        return acc
         ### END CODE HERE ###
     else:
         raise ValueError(f'Logits should either be 2-dim (for classification) or 3-dim (for generation); got {logits.dim()}')
