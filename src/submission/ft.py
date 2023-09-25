@@ -316,7 +316,31 @@ def tokenize_gpt2_batch(tokenizer, x, y):
     tokenized_sequences = None
 
     ### START CODE HERE ###
-    pass
+    
+    # padding token is -100
+    tokenizer.pad_token = -100
+    
+    # tokenize x and y and construct input_ids
+    tokenizer_dict = tokenizer([x_ + y_ for x_, y_ in zip(x, y)], return_tensors='pt', padding=True)
+    input_ids = tokenizer_dict['input_ids']
+    
+    inputIDx = tokenizer(x)['input_ids']
+    # inputIDy = tokenizer(y)['input_ids']
+
+    # construct attention_mask
+    attention_mask = tokenizer_dict['attention_mask']
+   
+    # construct labels
+    labels = input_ids.clone()
+    labels[attention_mask == 0] = -100
+    for i in range(len(inputIDx)):  
+        labels[i][:len(inputIDx[i])] = -100
+    
+    # add new keys to tokenizer_dict and return    
+    tokenizer_dict['input_ids'] = input_ids
+    tokenizer_dict['attention_mask'] = attention_mask
+    tokenizer_dict['labels'] = labels
+    tokenized_sequences = tokenizer_dict
     ### END CODE HERE ###
     
     return tokenized_sequences.to(DEVICE)
@@ -374,7 +398,26 @@ def ft_gpt2(model, tok, x, y, mode, dataset, batch_size=8, grad_accum=8):
         # Note: the ** operator will unpack a dictionary into keyword arguments to a function (such as your model)
         #############################
         ### START CODE HERE ###
-        pass
+        # Sample minibatch id of examples
+        batch_idxs = idxs[:batch_size // grad_accum]
+
+        # Tokenize the batch
+        batch_tokenized = tokenize_gpt2_batch(tok, [x[i] for i in batch_idxs], [y[i] for i in batch_idxs])
+
+        # Run the model on the batch
+        model_output = model(**batch_tokenized, use_cache=False)
+
+        # Compute the loss without using the loss attribute of the model output
+        loss = get_loss(model_output.logits, batch_tokenized.labels)
+
+        # Backpropagate the loss
+        loss.backward()
+
+        # Take a step of the optimizer and zero the model gradients every grad_accum steps
+        if step % grad_accum == 0 and step != 0:
+            optimizer.step()
+            optimizer.zero_grad()
+                
         ### END CODE HERE ###
 
         if step % (grad_accum * 5) == 0:
