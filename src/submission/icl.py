@@ -149,7 +149,7 @@ def do_sample(model, input_ids, stop_tokens, max_tokens):
                 break
             sampled_tokens.append(next_token_id)
             input_ids = torch.cat((input_ids, torch.tensor([[next_token_id]])), dim=-1)
-            #input_ids = torch.cat((input_ids, next_token_id), dim=-1)
+            
     
     ### END CODE HERE ###
 
