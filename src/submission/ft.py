@@ -166,7 +166,12 @@ def get_loss(logits: torch.tensor, targets: torch.tensor) -> torch.tensor:
         ### END CODE HERE ###
     elif logits.dim() == 3:
         ### START CODE HERE ###
-        loss = nn.CrossEntropyLoss(reduction='none')(logits.transpose(1,2), targets)
+        # There is an off-by-one shift needed between the logits and targets
+        # Ignore_index=-100. Apply mean reduction
+
+        loss = nn.CrossEntropyLoss(ignore_index=-100,reduction='mean')(logits[:, :-1,:].transpose(1,2), targets[:, 1:])
+        
+        # loss = nn.CrossEntropyLoss(ignore_index=-100,reduction='none')(logits[:, :-1,:], targets[:, 1:]).sum(dim=1)/((targets[:, 1:] != -100).sum(dim=1))
         ### END CODE HERE ###
     else:
         raise ValueError(f'Logits should either be 2-dim (for classification) or 3-dim (for generation); got {logits.dim()}')
@@ -199,25 +204,28 @@ def get_acc(logits, targets):
 
     if logits.dim() == 2:
         ### START CODE HERE ###
-        #return (logits.argmax(dim=1) == targets).float().mean()
+      
         assert logits.dim() == 2
         assert targets.dim() == 1
         assert logits.shape[0] == targets.shape[0]
-        #exclude masked tokens
+     
                  
         y = torch.argmax(logits, dim=1) == targets
         y = y.type(torch.float)
         acc = torch.mean(y).item()
-        return acc
-        
-        #scalar = logits.argmax(dim=1) == targets
-        #scalar = scalar[scalar == True].shape[0] / scalar.shape[0]
-
-        #return scalar
+        return acc       
         ### END CODE HERE ###
     elif logits.dim() == 3:
         ### START CODE HERE ###
-        y = torch.argmax(logits, dim=2) == targets
+        
+        # Ignore_index=-100. Apply mean reduction
+        no_mask = targets != -100
+        logits = logits[no_mask]
+        targets = targets[no_mask]
+        logits = logits[:-1,:] #off-by-one shift
+        targets = targets[1:]
+        # calculate accuracy
+        y = torch.argmax(logits, dim=1) == targets
         y = y.type(torch.float)
         acc = torch.mean(y).item()
         return acc
@@ -315,18 +323,18 @@ def tokenize_gpt2_batch(tokenizer, x, y):
     """
     tokenized_sequences = None
 
-    ### START CODE HERE ###
+    ### START CODE HERE ###    
+    # tokenize x and y and construct input_ids
+    tokenizer_dict = tokenizer([x_ + y_ for x_, y_ in zip(x, y)], return_tensors='pt', padding=True)
     
     # padding token is -100
     tokenizer.pad_token = -100
-    
-    # tokenize x and y and construct input_ids
-    tokenizer_dict = tokenizer([x_ + y_ for x_, y_ in zip(x, y)], return_tensors='pt', padding=True)
+
+    # construct input_ids
     input_ids = tokenizer_dict['input_ids']
-    
     inputIDx = tokenizer(x)['input_ids']
     # inputIDy = tokenizer(y)['input_ids']
-
+    
     # construct attention_mask
     attention_mask = tokenizer_dict['attention_mask']
    
@@ -399,7 +407,7 @@ def ft_gpt2(model, tok, x, y, mode, dataset, batch_size=8, grad_accum=8):
         #############################
         ### START CODE HERE ###
         # Sample minibatch id of examples
-        batch_idxs = idxs[:batch_size // grad_accum]
+        # batch_idxs = idxs[:batch_size // grad_accum]
 
         # Tokenize the batch
         batch_tokenized = tokenize_gpt2_batch(tok, [x[i] for i in batch_idxs], [y[i] for i in batch_idxs])
@@ -409,11 +417,13 @@ def ft_gpt2(model, tok, x, y, mode, dataset, batch_size=8, grad_accum=8):
 
         # Compute the loss without using the loss attribute of the model output
         loss = get_loss(model_output.logits, batch_tokenized.labels)
+        loss_model = model_output.loss #for comparison with get_loss function
 
-        # Backpropagate the loss
+        # Backpropagate the loss after dividing by grad_accum
+        loss = loss / grad_accum
         loss.backward()
-
-        # Take a step of the optimizer and zero the model gradients every grad_accum steps
+        
+        # Take a step of the optimizer and zero the model gradients every grad_accum stepsj(bypass step=0)
         if step % grad_accum == 0 and step != 0:
             optimizer.step()
             optimizer.zero_grad()
