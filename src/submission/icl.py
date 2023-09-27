@@ -144,11 +144,13 @@ def do_sample(model, input_ids, stop_tokens, max_tokens):
             logits = outputs.logits
             next_token_logits = logits[:, -1, :]
             #greedy sampling
-            next_token_id = torch.argmax(next_token_logits, dim=-1)
+            next_token_id = torch.argmax(next_token_logits, dim=-1).item()
             if next_token_id in stop_tokens:
                 break
             sampled_tokens.append(next_token_id)
-            input_ids = torch.cat((input_ids, next_token_id.unsqueeze(0)), dim=-1)
+            input_ids = torch.cat((input_ids, torch.tensor([[next_token_id]])), dim=-1)
+            #input_ids = torch.cat((input_ids, next_token_id), dim=-1)
+    
     ### END CODE HERE ###
 
     return sampled_tokens
