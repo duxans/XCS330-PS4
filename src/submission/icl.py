@@ -147,8 +147,8 @@ def do_sample(model, input_ids, stop_tokens, max_tokens):
             next_token_id = torch.argmax(next_token_logits, dim=-1).item()
             if next_token_id in stop_tokens:
                 break
-            sampled_tokens.append(next_token_id)
-            input_ids = torch.cat((input_ids, torch.tensor([[next_token_id]])), dim=-1)
+            sampled_tokens.append(next_token_id)            
+            input_ids = torch.cat((input_ids.to(DEVICE), torch.tensor([[next_token_id]], device = DEVICE)), dim=-1)
             
     
     ### END CODE HERE ###
@@ -211,6 +211,7 @@ def run_icl(models: List[str], datasets_: List[str], ks: List[int], prompt_modes
                             ### START CODE HERE ###
                             prompts = get_icl_prompts(support_x, support_y, test_input, prompt_mode)
                             sampled_tokens = do_sample(model, tokenizer(prompts, return_tensors='pt').input_ids.to(DEVICE), stop_tokens, max_tokens)
+                            sampled_tokens = [t.to(DEVICE) for t in sampled_tokens]  # move the sampled_tokens to the same device otherwise runtime error!
                             sampled_tokens = torch.cat(sampled_tokens, dim=-1)
                             sampled_tokens = sampled_tokens.tolist()
                             decoded_prediction = tokenizer.decode(token_ids=sampled_tokens, skip_special_tokens=True)
