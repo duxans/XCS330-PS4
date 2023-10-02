@@ -68,8 +68,7 @@ class LoRAConv1DWrapper(nn.Module):
         ###
         #############################
         ### START CODE HERE ###
-        shape_pre_W = self.base_module.weight.shape
-        #result = torch.nn.functional.linear(x,shape_pre_W, bias=self.base_module.bias)
+        #shape_pre_W = self.base_module.weight.shape
         result = self.base_module(x)
         result += x @ self.lora_A @ self.lora_B.transpose(0,1)
         return result
@@ -99,7 +98,6 @@ def parameters_to_fine_tune(model: nn.Module, mode: str) -> List:
         ### END CODE HERE ###
     elif mode == 'last':
         ### START CODE HERE ###
-        #finetune the last 2 transformer blocks
         parameters = []
         for param in model.transformer.h[-2:].parameters():
             parameters.append(param)
@@ -123,10 +121,8 @@ def parameters_to_fine_tune(model: nn.Module, mode: str) -> List:
     elif mode.startswith('lora'):
         ### START CODE HERE ###
         parameters = []
-        #checking for modules that are an instance of LoRAConv1DWrapper:
         for modules in model.modules():
             if isinstance(modules, LoRAConv1DWrapper):
-                #for param in modules.parameters():
                 for param in modules.lora_A, modules.lora_B:
                     parameters.append(param)
         return parameters
@@ -166,12 +162,9 @@ def get_loss(logits: torch.tensor, targets: torch.tensor) -> torch.tensor:
         ### END CODE HERE ###
     elif logits.dim() == 3:
         ### START CODE HERE ###
-        # There is an off-by-one shift needed between the logits and targets
-        # Ignore_index=-100. Apply mean reduction
-
+        # Off-by-one shift needed between the logits and targets
+        # Ignore_index=-100. Apply mean reduction.
         loss = nn.CrossEntropyLoss(ignore_index=-100,reduction='mean')(logits[:, :-1,:].transpose(1,2), targets[:, 1:])
-        
-        # loss = nn.CrossEntropyLoss(ignore_index=-100,reduction='none')(logits[:, :-1,:], targets[:, 1:]).sum(dim=1)/((targets[:, 1:] != -100).sum(dim=1))
         ### END CODE HERE ###
     else:
         raise ValueError(f'Logits should either be 2-dim (for classification) or 3-dim (for generation); got {logits.dim()}')
@@ -208,8 +201,7 @@ def get_acc(logits, targets):
         assert logits.dim() == 2
         assert targets.dim() == 1
         assert logits.shape[0] == targets.shape[0]
-     
-                 
+                      
         y = torch.argmax(logits, dim=1) == targets
         y = y.type(torch.float)
         acc = torch.mean(y).item()
@@ -217,17 +209,15 @@ def get_acc(logits, targets):
         ### END CODE HERE ###
     elif logits.dim() == 3:
         ### START CODE HERE ###
-        
-        # Ignore_index=-100. Apply mean reduction
+        logits = logits[:,:-1,:] #off-by-one shift
+        targets = targets[:,1:]
         no_mask = targets != -100
-        logits = logits[no_mask]
+        logits = logits[no_mask,:]
         targets = targets[no_mask]
-        logits = logits[:-1,:] #off-by-one shift
-        targets = targets[1:]
         # calculate accuracy
         y = torch.argmax(logits, dim=1) == targets
         y = y.type(torch.float)
-        acc = torch.mean(y).item()
+        acc = y.sum() / no_mask.sum()
         return acc
         ### END CODE HERE ###
     else:
@@ -406,9 +396,6 @@ def ft_gpt2(model, tok, x, y, mode, dataset, batch_size=8, grad_accum=8):
         # Note: the ** operator will unpack a dictionary into keyword arguments to a function (such as your model)
         #############################
         ### START CODE HERE ###
-        # Sample minibatch id of examples
-        # batch_idxs = idxs[:batch_size // grad_accum]
-
         # Tokenize the batch
         batch_tokenized = tokenize_gpt2_batch(tok, [x[i] for i in batch_idxs], [y[i] for i in batch_idxs])
 
