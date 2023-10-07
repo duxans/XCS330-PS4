@@ -209,11 +209,21 @@ def run_icl(models: List[str], datasets_: List[str], ks: List[int], prompt_modes
                             decoded_prediction = ''
 
                             ### START CODE HERE ###
+                            ''' THIS RUNS OK ON GPU
                             prompts = get_icl_prompts(support_x, support_y, test_input, prompt_mode)
                             sampled_tokens = do_sample(model, tokenizer(prompts, return_tensors='pt').input_ids.to(DEVICE), stop_tokens, max_tokens)
                             sampled_tokens = [t.to(DEVICE) for t in sampled_tokens]  # move the sampled_tokens to the same device otherwise runtime error!
                             sampled_tokens = torch.cat(sampled_tokens, dim=-1)
                             sampled_tokens = sampled_tokens.tolist()
+                            decoded_prediction = tokenizer.decode(token_ids=sampled_tokens, skip_special_tokens=True)
+                            '''
+                            prompts = get_icl_prompts(support_x, support_y, test_input, prompt_mode)
+                            sampled_tokens = do_sample(model, tokenizer(prompts, return_tensors='pt').input_ids.to(DEVICE), stop_tokens, max_tokens)
+                            #sampled_tokens = [t.to(DEVICE) for t in sampled_tokens]  # move the sampled_tokens to the same device otherwise runtime error!
+                            #sampled_tokens = torch.tensor(sampled_tokens, dtype=torch.float32)
+                            #sampled_tokens = [t.to(DEVICE) for t in sampled_tokens]
+                            #sampled_tokens = torch.cat(sampled_tokens, dim=-1)
+                            #sampled_tokens = sampled_tokens.tolist()
                             decoded_prediction = tokenizer.decode(token_ids=sampled_tokens, skip_special_tokens=True)
                             ### END CODE HERE ###
 
