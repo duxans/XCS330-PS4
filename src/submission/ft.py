@@ -197,11 +197,6 @@ def get_acc(logits, targets):
 
     if logits.dim() == 2:
         ### START CODE HERE ###
-      
-        assert logits.dim() == 2
-        assert targets.dim() == 1
-        assert logits.shape[0] == targets.shape[0]
-                      
         y = torch.argmax(logits, dim=1) == targets
         y = y.type(torch.float)
         acc = torch.mean(y).item()
